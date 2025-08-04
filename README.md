@@ -16,7 +16,7 @@ Early diagnosis and continuous monitoring are critical in managing Alzheimer’s
 
 ---
 
-## 📝 Abstract
+## 📝 Objective
 
 NeuroInsight addresses these limitations by combining automated deep learning-based MRI analysis, doctor collaboration, intelligent report formatting, and interactive AI-driven patient support. The platform simplifies the diagnosis process, improves record-keeping, and empowers patients to track and understand their neurological health using clear analytics and easy-to-use conversational interfaces.
 
