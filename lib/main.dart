@@ -1,50 +1,60 @@
+// lib/main.dart
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:neuroinsight/screens/views/home_view.dart';
-import 'package:neuroinsight/screens/views/login_view.dart';
-
-
-import 'views/login_view.dart';
+import 'package:neuroinsight/screens/views/login_view.dart'; // Import LoginView
+import 'package:neuroinsight/screens/views/onboarding_view.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 
 void main() async {
-  // Ensure Flutter bindings are initialized
+  // --- MODIFICATION: Main function is now async ---
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize Firebase
   await Firebase.initializeApp();
-  runApp(const MyApp());
+
+  // Check if the user has completed onboarding
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final bool hasOnboarded = prefs.getBool('hasOnboarded') ?? false;
+
+  runApp(MyApp(hasOnboarded: hasOnboarded));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // --- MODIFICATION: Accept the flag from main() ---
+  final bool hasOnboarded;
+  const MyApp({super.key, required this.hasOnboarded});
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryBackgroundColor = Color(0xFFE1F7F5);
+
     return MaterialApp(
       title: 'NeuroInsight',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: primaryBackgroundColor,
+        textTheme: GoogleFonts.loraTextTheme(
+          Theme.of(context).textTheme,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // StreamBuilder listens to auth state changes
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Show a loading indicator while checking auth state
             return const Scaffold(
               body: Center(
                 child: CircularProgressIndicator(),
               ),
             );
           } else if (snapshot.hasData) {
-            // If user is logged in, show HomeView
-            return HomeView(); // This will now be recognized
+            return const HomeView();
           } else {
-            // If user is not logged in, show LoginView
-            return LoginView(); // This will also be recognized
+            // --- MODIFICATION: Show LoginView if already onboarded, otherwise show OnboardingView ---
+            return hasOnboarded ? const LoginView() : const OnboardingView();
           }
         },
       ),

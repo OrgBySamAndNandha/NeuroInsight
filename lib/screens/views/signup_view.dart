@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-
-// --- IMPORTANT: Corrected imports for your 'lib/screens/views/' structure ---
-
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import '../controllers/auth_controller.dart';
-import '../widgets/glass_morphism.dart';
 
 class SignUpView extends StatefulWidget {
   const SignUpView({super.key});
@@ -13,7 +11,6 @@ class SignUpView extends StatefulWidget {
 }
 
 class _SignUpViewState extends State<SignUpView> {
-  // --- Controllers and State Variables ---
   final AuthController _authController = AuthController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -21,7 +18,6 @@ class _SignUpViewState extends State<SignUpView> {
   bool _isLoading = false;
 
   void _signUp() async {
-    // Basic validation
     if (_emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
@@ -50,8 +46,6 @@ class _SignUpViewState extends State<SignUpView> {
       _passwordController.text.trim(),
     );
 
-    // After sign up, the StreamBuilder in main.dart will handle navigation if successful.
-    // If the widget is still mounted (i.e., sign-up failed), we stop the loader.
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -68,70 +62,71 @@ class _SignUpViewState extends State<SignUpView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          // Using a slightly different gradient for visual distinction
-          gradient: LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+      backgroundColor: const Color(0xFFE1F7F5),
+      // --- Layout structure now matches login_view.dart ---
+      body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: GlassmorphicContainer(
-              borderRadius: 20,
-              blur: 10,
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Create Account',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 70.0),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 200,
+                    height: 200,
+                    // Using the doctors.json animation as specified in your original signup file
+                    child: Lottie.asset('assets/animations/User Account.json'),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // --- Header Text for Sign Up ---
+                  Text(
+                    'Create Account',
+                    style: GoogleFonts.lora(
+                      color: Colors.black87,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Start your journey with us',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Start your journey with us',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
                     ),
-                    const SizedBox(height: 32),
-                    _buildTextField(
-                      controller: _emailController,
-                      hint: 'Email',
-                      icon: Icons.email_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _passwordController,
-                      hint: 'Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _confirmPasswordController,
-                      hint: 'Confirm Password',
-                      icon: Icons.lock_person_outlined,
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 32),
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : _buildSignUpButton(),
-                    const SizedBox(height: 24),
-                    _buildLoginPrompt(),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // --- Form Fields and Buttons ---
+                  _buildTextField(
+                    controller: _emailController,
+                    hint: 'Email',
+                    icon: Icons.email_outlined,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _passwordController,
+                    hint: 'Password',
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _confirmPasswordController,
+                    hint: 'Confirm Password',
+                    icon: Icons.lock_person_outlined,
+                    isPassword: true,
+                  ),
+                  const SizedBox(height: 40),
+                  _isLoading
+                      ? const CircularProgressIndicator(color: Colors.black87)
+                      : _buildSignUpButton(),
+                  const SizedBox(height: 30),
+                  _buildLoginPrompt(),
+                ],
               ),
             ),
           ),
@@ -139,6 +134,8 @@ class _SignUpViewState extends State<SignUpView> {
       ),
     );
   }
+
+  // --- Helper widgets now use the exact same style as login_view.dart ---
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -149,16 +146,25 @@ class _SignUpViewState extends State<SignUpView> {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        hintStyle: TextStyle(color: Colors.black87.withOpacity(0.8)),
+        prefixIcon: Icon(icon, color: Colors.black87, size: 22),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.2),
+        fillColor: Colors.black.withOpacity(0.20),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 15),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(200),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(200),
+          borderSide: BorderSide(color: Colors.black87.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(200),
+          borderSide: const BorderSide(color: Colors.black87),
         ),
       ),
     );
@@ -170,15 +176,18 @@ class _SignUpViewState extends State<SignUpView> {
       child: ElevatedButton(
         onPressed: _signUp,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF1E3A8A),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          backgroundColor: Colors.black87,
+          foregroundColor: const Color(0xFF3D5A80),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(200),
           ),
+          elevation: 1,
         ),
-        child: const Text('SIGN UP',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        child: const Text(
+          'SIGN UP',
+          style: TextStyle(fontSize: 16, color:Colors.white, fontWeight: FontWeight.bold, letterSpacing: 5),
+        ),
       ),
     );
   }
@@ -188,14 +197,16 @@ class _SignUpViewState extends State<SignUpView> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text("Already have an account?",
-            style: TextStyle(color: Colors.white70)),
+            style: TextStyle(color: Colors.black87)),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text(
             'Login',
             style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.black87
             ),
           ),
         ),

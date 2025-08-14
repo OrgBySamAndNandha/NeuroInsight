@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "59493945297-mg1ma7g50ss4lkd6c2sfsr47k8g1vt94.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.neuroinsight",
+            "certificate_hash": "46f9e231d5c0334c9d7d89ae6165d68edbf7fc64"
+          }
+        },
+        {
           "client_id": "59493945297-27cc7sok7t432p9t4a0j3dqn18l7l43s.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "59493945297-27cc7sok7t432p9t4a0j3dqn18l7l43s.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "59493945297-4rngo9c20og6mg67miuaotig1g1bp5i7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.neuroinsight"
+              }
             }
           ]
         }

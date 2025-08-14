@@ -1,134 +1,190 @@
+// lib/controllers/auth_controller.dart
+
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../views/login_view.dart';
-import '../views/otp_view.dart';
-
+import 'package:neuroinsight/screens/views/login_view.dart'; // Import LoginView
+import '../views/home_view.dart';
+import '../models/user_model.dart';
 
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Helper function to show a snackbar
-  void _showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
+  // ... (signUp, signIn methods are unchanged) ...
+  /// ✅ Sign up with email and password
+  Future<void> signUpWithEmail(
+      BuildContext context,
+      String email,
+      String password, [
+        String? displayName,
+      ]) async {
+    try {
+      UserCredential userCredential =
+      await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+
+      User? user = userCredential.user;
+      if (user != null) {
+        final name = displayName ?? email.split('@')[0];
+        await user.updateDisplayName(name);
+        await user.reload();
+
+        UserModel userModel = UserModel(
+          uid: user.uid,
+          email: user.email,
+          displayName: name,
+        );
+
+        await _firestore.collection('users').doc(user.uid).set({
+          'uid': userModel.uid,
+          'email': userModel.email,
+          'displayName': userModel.displayName,
+          'photoURL': user.photoURL,
+        });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeView()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Sign-up failed')),
+      );
+    }
   }
 
-  // Sign in with Google
+  /// ✅ Sign in with email and password
+  Future<void> signInWithEmail(
+      BuildContext context,
+      String email,
+      String password,
+      ) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeView()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Login failed')),
+      );
+    }
+  }
+
+  /// ✅ Sign in with Google
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        return; // User cancelled the sign-in
-      }
+      if (googleUser == null) return;
+
       final GoogleSignInAuthentication googleAuth =
       await googleUser.authentication;
+
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
+
+      UserCredential userCredential =
       await _auth.signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      _showErrorSnackBar(context, 'Google Sign-In Failed: ${e.message}');
-    } catch (e) {
-      _showErrorSnackBar(context, 'An unexpected error occurred.');
-    }
-  }
+      User? user = userCredential.user;
 
-  // --- THIS IS THE METHOD THAT WAS MISSING ---
-  // Sign up with Email & Password
-  Future<void> signUpWithEmail(
-      BuildContext context, String email, String password) async {
-    try {
-      await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      _showErrorSnackBar(context, 'Sign-Up Failed: ${e.message}');
-    } catch (e) {
-      _showErrorSnackBar(context, 'An unexpected error occurred.');
-    }
-  }
+      if (user != null) {
+        DocumentSnapshot doc =
+        await _firestore.collection('users').doc(user.uid).get();
 
-  // Sign in with Email & Password
-  Future<void> signInWithEmail(
-      BuildContext context, String email, String password) async {
-    try {
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      _showErrorSnackBar(context, 'Sign-In Failed: ${e.message}');
-    } catch (e) {
-      _showErrorSnackBar(context, 'An unexpected error occurred.');
-    }
-  }
+        if (!doc.exists) {
+          UserModel userModel = UserModel(
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+          );
 
-  // Verify Phone Number
-  Future<void> verifyPhoneNumber(BuildContext context, String phoneNumber) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
+          await _firestore.collection('users').doc(user.uid).set({
+            'uid': userModel.uid,
+            'email': userModel.email,
+            'displayName': userModel.displayName,
+            'photoURL': user.photoURL,
+          });
+        }
 
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-        Navigator.of(context).pop();
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        Navigator.of(context).pop();
-        _showErrorSnackBar(context, 'Verification Failed: ${e.message}');
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        Navigator.of(context).pop();
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => OtpView(verificationId: verificationId),
-          ),
+          MaterialPageRoute(builder: (context) => const HomeView()),
         );
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
-  }
-
-  // Sign in with OTP
-  Future<void> signInWithOtp(
-      BuildContext context, String verificationId, String smsCode) async {
-    try {
-      final AuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-      await _auth.signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      _showErrorSnackBar(context, 'OTP Verification Failed: ${e.message}');
+      }
     } catch (e) {
-      _showErrorSnackBar(context, 'An unexpected error occurred.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google sign-in failed: $e')),
+      );
     }
   }
 
-  // Sign Out
+  // --- MODIFICATION: Navigate to LoginView directly on sign out ---
+  /// ✅ Sign out
   Future<void> signOut(BuildContext context) async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+    // This removes all screens and pushes the LoginView as the new base screen.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginView()),
+          (Route<dynamic> route) => false,
+    );
+  }
+  // --- END OF MODIFICATION ---
+
+  /// ✅ Update User Profile
+  Future<void> updateUserProfile(BuildContext context, String displayName, File? imageFile) async {
     try {
-      await _googleSignIn.signOut();
-      await _auth.signOut();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => LoginView()),
-            (Route<dynamic> route) => false,
+      User? user = _auth.currentUser;
+      if (user == null) return;
+
+      String? photoURL;
+      if (imageFile != null) {
+        final ref = _storage.ref().child('profile_pictures').child('${user.uid}.jpg');
+        await ref.putFile(imageFile);
+        photoURL = await ref.getDownloadURL();
+      }
+
+      if (displayName.isNotEmpty && displayName != user.displayName) {
+        await user.updateDisplayName(displayName);
+      }
+      if (photoURL != null && photoURL != user.photoURL) {
+        await user.updatePhotoURL(photoURL);
+      }
+
+      final Map<String, dynamic> dataToUpdate = {};
+      if (displayName.isNotEmpty) dataToUpdate['displayName'] = displayName;
+      if (photoURL != null) dataToUpdate['photoURL'] = photoURL;
+
+      if (dataToUpdate.isNotEmpty) {
+        await _firestore.collection('users').doc(user.uid).update(dataToUpdate);
+      }
+
+      await user.reload();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully!"), backgroundColor: Colors.green),
       );
+      Navigator.of(context).pop();
     } catch (e) {
-      _showErrorSnackBar(context, 'Sign-Out Failed.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update profile: $e"), backgroundColor: Colors.red),
+      );
     }
   }
 }

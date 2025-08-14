@@ -1,78 +1,196 @@
+// lib/screens/views/home_view.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:neuroinsight/screens/controllers/profile_controllers.dart';
+import 'package:neuroinsight/screens/views/map_view.dart'; // Import the new map view
+import 'profile_view.dart';
 
-// Corrected import for your folder structure
-import '../controllers/auth_controller.dart';
+// ... (UploadScanPage, ViewReportsPage, ChatBotPage are unchanged) ...
+class UploadScanPage extends StatelessWidget {
+  const UploadScanPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+        child: Text('Upload MRI Scan Page',
+            style: TextStyle(color: Colors.black, fontSize: 24)));
+  }
+}
 
-class HomeView extends StatelessWidget {
-  HomeView({super.key});
+class ViewReportsPage extends StatelessWidget {
+  const ViewReportsPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+        child: Text('View My Reports Page',
+            style: TextStyle(color: Colors.black, fontSize: 24)));
+  }
+}
 
-  // Get the current user and an instance of the AuthController
-  final User? _user = FirebaseAuth.instance.currentUser;
-  final AuthController _authController = AuthController();
+class ChatBotPage extends StatelessWidget {
+  const ChatBotPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+        child: Text('Chat with AI Bot Page',
+            style: TextStyle(color: Colors.black, fontSize: 24)));
+  }
+}
+
+
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  int _selectedIndex = 0;
+  final ProfileController _profileController = ProfileController();
+
+  // --- MODIFICATION: Added MapView to the list of pages ---
+  static const List<Widget> _widgetOptions = <Widget>[
+    HomeContent(),
+    UploadScanPage(),
+    MapView(), // New page added here
+    ViewReportsPage(),
+    ChatBotPage(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkIfNewUser());
+  }
+
+  void _checkIfNewUser() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.metadata.creationTime != null && user.metadata.lastSignInTime != null) {
+      final creationTime = user.metadata.creationTime!;
+      final lastSignInTime = user.metadata.lastSignInTime!;
+      final isNewUser = lastSignInTime.difference(creationTime).inSeconds < 5;
+      final bool profileExists = await _profileController.checkProfileExists();
+      if (isNewUser && !profileExists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Welcome! Let\'s start by setting up your profile.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfileView()),
+          );
+        }
+      }
+    }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('NeuroInsight Dashboard'),
-        backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.8),
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              _authController.signOut(context);
-            },
-          ),
-        ],
+      backgroundColor: const Color(0xFFE1F7F5),
+      body: SafeArea(
+        child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      // Use the same gradient as the login screens for a consistent theme
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeHeader(),
-              const SizedBox(height: 32),
-              _buildActionGrid(context),
-              const SizedBox(height: 32),
-              _buildRecentActivitySection(),
-            ],
-          ),
-        ),
+      // --- MODIFICATION: Added a new Map icon to the navigation bar ---
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.upload_file_rounded), label: 'Upload'),
+          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Map'), // New icon added
+          BottomNavigationBarItem(icon: Icon(Icons.article_rounded), label: 'Reports'),
+          BottomNavigationBarItem(icon: Icon(Icons.support_agent_rounded), label: 'Chat'),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: const Color(0xFF1B1211),
+        unselectedItemColor: Colors.grey.shade600,
+        onTap: _onItemTapped,
+        backgroundColor: Colors.white,
+        iconSize: 30, // Adjusted size slightly for 5 items
+        showUnselectedLabels: false,
+        showSelectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8.0,
+      ),
+    );
+  }
+}
+
+// ... (HomeContent widget is unchanged) ...
+class HomeContent extends StatelessWidget {
+  const HomeContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final User? _user = FirebaseAuth.instance.currentUser;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          _buildWelcomeHeader(context, _user),
+          const SizedBox(height: 28),
+          _buildActionGrid(context),
+          const SizedBox(height: 28),
+          _buildRecentActivitySection(),
+        ],
       ),
     );
   }
 
-  // A widget to display a personalized welcome message
-  Widget _buildWelcomeHeader() {
-    // Use the user's display name if available (from Google), otherwise use the email
-    String displayName = _user?.displayName?.split(' ')[0] ?? _user?.email ?? 'User';
+  Widget _buildWelcomeHeader(BuildContext context, User? _user) {
+    String displayName =
+        _user?.displayName?.split(' ')[0] ?? _user?.email ?? 'User';
     if (displayName.contains('@')) {
       displayName = displayName.split('@')[0];
     }
 
-    return Text(
-      'Welcome back,\n$displayName!',
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            'Welcome back,\n$displayName!',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileView()),
+            );
+          },
+          child: CircleAvatar(
+            radius: 35,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: _user?.photoURL != null
+                ? NetworkImage(_user!.photoURL!)
+                : null,
+            child: _user?.photoURL == null
+                ? const Icon(Icons.person, size: 35, color: Colors.black54)
+                : null,
+          ),
+        ),
+      ],
     );
   }
 
-  // A grid of cards for the main application features
   Widget _buildActionGrid(BuildContext context) {
     return GridView.count(
       crossAxisCount: 2,
@@ -86,54 +204,33 @@ class HomeView extends StatelessWidget {
           icon: Icons.upload_file_rounded,
           title: 'Upload MRI Scan',
           color: Colors.blue,
-          onTap: () {
-            // Placeholder action
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Upload feature coming soon!')),
-            );
-          },
+          onTap: () {},
         ),
         _buildDashboardCard(
           context: context,
           icon: Icons.article_rounded,
           title: 'View My Reports',
           color: Colors.green,
-          onTap: () {
-            // Placeholder action
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Reports feature coming soon!')),
-            );
-          },
+          onTap: () {},
         ),
         _buildDashboardCard(
           context: context,
           icon: Icons.bar_chart_rounded,
           title: 'Health Analytics',
           color: Colors.orange,
-          onTap: () {
-            // Placeholder action
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Analytics feature coming soon!')),
-            );
-          },
+          onTap: () {},
         ),
         _buildDashboardCard(
           context: context,
           icon: Icons.support_agent_rounded,
           title: 'Chat with AI Bot',
           color: Colors.purple,
-          onTap: () {
-            // Placeholder action
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('AI Chat feature coming soon!')),
-            );
-          },
+          onTap: () {},
         ),
       ],
     );
   }
 
-  // A reusable card widget for the dashboard grid
   Widget _buildDashboardCard({
     required BuildContext context,
     required IconData icon,
@@ -142,9 +239,9 @@ class HomeView extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      color: Colors.white.withOpacity(0.15),
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 0,
+      elevation: 4,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -153,16 +250,16 @@ class HomeView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 30,
+              radius: 40,
               backgroundColor: color,
-              child: Icon(icon, size: 30, color: Colors.white),
+              child: Icon(icon, size: 40, color: Colors.white),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black87,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -173,7 +270,6 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // A placeholder section for recent activity
   Widget _buildRecentActivitySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,23 +277,29 @@ class HomeView extends StatelessWidget {
         const Text(
           'Recent Activity',
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
         Card(
-          color: Colors.white.withOpacity(0.15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          elevation: 0,
-          child: const ListTile(
+          color: Colors.white,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 4.0,
+          child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.info_outline_rounded, color: Colors.white),
+              radius: 25,
+              backgroundColor: Colors.grey.shade200,
+              child: const Icon(Icons.info_outline_rounded,
+                  color: Colors.black54, size: 30),
             ),
-            title: Text('No recent activity', style: TextStyle(color: Colors.white)),
-            subtitle: Text('Upload a scan to get started.', style: TextStyle(color: Colors.white70)),
+            title: const Text('No recent activity',
+                style: TextStyle(
+                    color: Colors.black87, fontWeight: FontWeight.bold)),
+            subtitle: Text('Upload a scan to get started.',
+                style: TextStyle(color: Colors.grey.shade600)),
           ),
         ),
       ],
