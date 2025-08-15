@@ -1,4 +1,4 @@
-// lib/screens/views/profile_view.dart
+// lib/screens/views/user_profile_view.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,11 +6,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:neuroinsight/screens/controllers/profile_controllers.dart';
-import 'package:neuroinsight/screens/models/profile_analysis_model.dart';
+import 'package:neuroinsight/screens/users/controllers/user_profile_controllers.dart';
+import 'package:neuroinsight/screens/users/models/user_profile_analysis_model.dart';
 import 'package:numberpicker/numberpicker.dart';
 
-import 'edit_profile_view.dart';
+import 'user_edit_profile_view.dart';
 
 enum ActivePicker { none, birthYear, condition }
 

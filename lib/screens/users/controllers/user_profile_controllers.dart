@@ -1,11 +1,11 @@
-// lib/screens/controllers/profile_controllers.dart
+// lib/screens/controllers/user_profile_controllers.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:neuroinsight/screens/models/profile_analysis_model.dart';
-import 'package:neuroinsight/screens/views/home_view.dart';
-import 'auth_controller.dart';
+import 'package:neuroinsight/screens/users/models/user_profile_analysis_model.dart';
+import 'package:neuroinsight/screens/users/views/user_home_view.dart';
+import 'user_auth_controller.dart';
 
 class ProfileController {
   final AuthController _authController = AuthController();

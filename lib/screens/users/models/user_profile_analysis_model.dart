@@ -1,4 +1,4 @@
-// lib/screens/models/profile_analysis_model.dart
+// l_ib/screens/models/user_profile_analysis_model.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 

@@ -1,11 +1,11 @@
-// lib/screens/views/edit_profile_view.dart
+// lib/screens/views/user_edit_profile_view.dart
 
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:neuroinsight/screens/controllers/auth_controller.dart';
+import 'package:neuroinsight/screens/users/controllers/user_auth_controller.dart';
 
 class EditProfileView extends StatefulWidget {
   const EditProfileView({super.key});

@@ -1,12 +1,10 @@
-// lib/screens/views/home_view.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:neuroinsight/screens/controllers/profile_controllers.dart';
-import 'package:neuroinsight/screens/views/map_view.dart'; // Import the new map view
-import 'profile_view.dart';
+import 'package:neuroinsight/screens/users/controllers/user_profile_controllers.dart';
+import 'package:neuroinsight/screens/users/views/user_appointments_view.dart';
+import 'package:neuroinsight/screens/users/views/user_map_view.dart';
+import 'user_profile_view.dart';
 
-// ... (UploadScanPage, ViewReportsPage, ChatBotPage are unchanged) ...
 class UploadScanPage extends StatelessWidget {
   const UploadScanPage({super.key});
   @override
@@ -37,7 +35,6 @@ class ChatBotPage extends StatelessWidget {
   }
 }
 
-
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -49,11 +46,10 @@ class _HomeViewState extends State<HomeView> {
   int _selectedIndex = 0;
   final ProfileController _profileController = ProfileController();
 
-  // --- MODIFICATION: Added MapView to the list of pages ---
   static const List<Widget> _widgetOptions = <Widget>[
     HomeContent(),
     UploadScanPage(),
-    MapView(), // New page added here
+    MapView(),
     ViewReportsPage(),
     ChatBotPage(),
   ];
@@ -101,12 +97,11 @@ class _HomeViewState extends State<HomeView> {
       body: SafeArea(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      // --- MODIFICATION: Added a new Map icon to the navigation bar ---
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.upload_file_rounded), label: 'Upload'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Map'), // New icon added
+          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Map'),
           BottomNavigationBarItem(icon: Icon(Icons.article_rounded), label: 'Reports'),
           BottomNavigationBarItem(icon: Icon(Icons.support_agent_rounded), label: 'Chat'),
         ],
@@ -115,7 +110,7 @@ class _HomeViewState extends State<HomeView> {
         unselectedItemColor: Colors.grey.shade600,
         onTap: _onItemTapped,
         backgroundColor: Colors.white,
-        iconSize: 30, // Adjusted size slightly for 5 items
+        iconSize: 30,
         showUnselectedLabels: false,
         showSelectedLabels: true,
         type: BottomNavigationBarType.fixed,
@@ -125,7 +120,6 @@ class _HomeViewState extends State<HomeView> {
   }
 }
 
-// ... (HomeContent widget is unchanged) ...
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
 
@@ -208,10 +202,15 @@ class HomeContent extends StatelessWidget {
         ),
         _buildDashboardCard(
           context: context,
-          icon: Icons.article_rounded,
-          title: 'View My Reports',
+          icon: Icons.calendar_month_rounded,
+          title: 'My Appointments',
           color: Colors.green,
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MyAppointmentsView()),
+            );
+          },
         ),
         _buildDashboardCard(
           context: context,

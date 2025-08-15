@@ -1,4 +1,4 @@
-// lib/controllers/auth_controller.dart
+// lib/controllers/user_auth_controller.dart
 
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,9 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:neuroinsight/screens/views/login_view.dart'; // Import LoginView
-import '../views/home_view.dart';
-import '../models/user_model.dart';
+import 'package:neuroinsight/screens/users/models/user_model.dart';
+import 'package:neuroinsight/screens/users/views/user_home_view.dart';
+import 'package:neuroinsight/screens/users/views/user_login_view.dart';
+
 
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;

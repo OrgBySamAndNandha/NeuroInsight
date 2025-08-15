@@ -1,10 +1,10 @@
-// lib/screens/views/onboarding_view.dart
+// lib/screens/views/user_onboarding_view.dart
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:lottie/lottie.dart';
-import 'package:neuroinsight/screens/views/login_view.dart';
+import 'package:neuroinsight/screens/users/views/user_login_view.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 
 class OnboardingView extends StatelessWidget {
