@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:neuroinsight/screens/admin/controllers/doctors_auth_controller.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_appointment_model.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_model.dart';
+import 'package:neuroinsight/screens/users/models/user_model.dart';
 
 class DoctorMapView extends StatefulWidget {
   const DoctorMapView({super.key});
@@ -16,6 +18,46 @@ class DoctorMapView extends StatefulWidget {
 class _DoctorMapViewState extends State<DoctorMapView> {
   final AdminAuthController _authController = AdminAuthController();
   Future<DoctorModel?>? _doctorProfileFuture;
+
+  // --- ✅ NEW: Method to show patient details on marker tap ---
+  void _showPatientDetails(BuildContext context, AppointmentModel appointment) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(appointment.patientName, style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              _buildInfoRow(Icons.sick_outlined, appointment.problemDescription),
+              const SizedBox(height: 8),
+              _buildInfoRow(
+                Icons.calendar_today_outlined,
+                appointment.appointmentDate != null
+                    ? DateFormat('EEE, MMM d, yyyy @ h:mm a').format(appointment.appointmentDate!.toDate())
+                    : 'Not Scheduled',
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.grey.shade600, size: 20),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 16))),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -40,45 +82,59 @@ class _DoctorMapViewState extends State<DoctorMapView> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!doctorSnapshot.hasData || doctorSnapshot.data == null) {
-            return const Center(child: Text('Could not load location data.'));
+            return const Center(child: Text('Could not load your location data.'));
           }
 
           final doctor = doctorSnapshot.data!;
           final doctorLocation = LatLng(doctor.location.latitude, doctor.location.longitude);
 
-          // This StreamBuilder fetches and displays confirmed home visits in real-time.
+          // --- ✅ MODIFIED: Stream now fetches all appointments assigned to the doctor ---
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('appointments')
-                .where('confirmedDoctorId', isEqualTo: doctor.uid)
-                .where('visitPreference', isEqualTo: 'Home Visit')
+                .where('currentDoctorId', isEqualTo: doctor.uid)
                 .snapshots(),
             builder: (context, appointmentsSnapshot) {
+              if (appointmentsSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
               final Set<Marker> markers = {};
 
               // Marker for the doctor's own clinic
               markers.add(Marker(
                 markerId: MarkerId(doctor.uid),
                 position: doctorLocation,
-                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
                 infoWindow: InfoWindow(
                   title: doctor.doctorName,
                   snippet: "My Clinic",
                 ),
               ));
 
-              // Markers for patients with confirmed home visits
+              // --- ✅ MODIFIED: Logic to create patient markers with status-based colors ---
               if (appointmentsSnapshot.hasData) {
                 for (var doc in appointmentsSnapshot.data!.docs) {
                   final appointment = AppointmentModel.fromFirestore(doc);
                   if (appointment.patientLocation != null) {
+                    // Determine marker color based on status
+                    final markerColor = appointment.status == 'confirmed'
+                        ? BitmapDescriptor.hueGreen // Accepted = Green
+                        : BitmapDescriptor.hueRed;   // Pending = Red
+
                     markers.add(Marker(
                       markerId: MarkerId(appointment.id),
                       position: LatLng(appointment.patientLocation!.latitude, appointment.patientLocation!.longitude),
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
                       infoWindow: InfoWindow(
                         title: appointment.patientName,
-                        snippet: "Patient Home Visit",
+                        snippet: "Status: ${appointment.status}",
                       ),
+                      onTap: () {
+                        // Only show details for accepted (green) markers
+                        if (appointment.status == 'confirmed') {
+                          _showPatientDetails(context, appointment);
+                        }
+                      },
                     ));
                   }
                 }

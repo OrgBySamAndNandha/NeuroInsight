@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:neuroinsight/screens/admin/models/doctor_appointment_model.dart' show AppointmentModel;
+import 'package:intl/intl.dart';
+import 'package:neuroinsight/screens/admin/models/doctor_appointment_model.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_model.dart';
 
 class MyAppointmentsView extends StatefulWidget {
@@ -84,23 +85,30 @@ class _MyAppointmentsViewState extends State<MyAppointmentsView> {
           icon: Icons.hourglass_top_rounded,
           color: Colors.orange,
           title: "Request Pending",
-          body: "Your request is currently being reviewed by Dr. $currentDoctorName. We will notify you of any updates.",
+          body: "Your request is currently being reviewed by $currentDoctorName. We will notify you of any updates.",
         );
       case 'confirmed':
         final confirmedDoctorName = doctorsMap[appointment.confirmedDoctorId]?.doctorName ?? 'a doctor';
+        final appointmentTime = appointment.appointmentDate != null
+            ? DateFormat('EEE, MMM d, yyyy @ h:mm a').format(appointment.appointmentDate!.toDate())
+            : 'Date not set';
         return _buildStatusCard(
           icon: Icons.check_circle_rounded,
           color: Colors.green,
-          title: "Appointment Confirmed!",
-          body: "Your appointment with Dr. $confirmedDoctorName has been confirmed.",
-          actions: [ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.directions), label: const Text("Get Directions"))],
+          title: "Appointment Accepted!",
+          body: "Your appointment with $confirmedDoctorName has been confirmed for:\n$appointmentTime",
         );
+    // --- ✅ MODIFIED: Logic for rejected status ---
       case 'rejected':
+      // The doctor who rejected it is the last one in the rejection chain.
+        final rejectingDoctorId = appointment.rejectionChain.isNotEmpty ? appointment.rejectionChain.last : null;
+        final rejectingDoctorName = doctorsMap[rejectingDoctorId]?.doctorName ?? 'the doctor';
+        final reason = appointment.rejectionReason ?? 'No reason provided.';
         return _buildStatusCard(
           icon: Icons.cancel_rounded,
           color: Colors.red,
-          title: "Request Not Fulfilled",
-          body: "We're sorry, all available doctors were busy and your request could not be fulfilled. Please try again later.",
+          title: "Request Rejected",
+          body: "Your request was rejected by $rejectingDoctorName.\nReason: $reason",
         );
       default:
         return const SizedBox.shrink();
@@ -112,7 +120,6 @@ class _MyAppointmentsViewState extends State<MyAppointmentsView> {
     required Color color,
     required String title,
     required String body,
-    List<Widget>? actions,
   }) {
     return Card(
       elevation: 4,
@@ -135,10 +142,6 @@ class _MyAppointmentsViewState extends State<MyAppointmentsView> {
             ),
             const SizedBox(height: 12),
             Text(body, style: TextStyle(fontSize: 15, color: Colors.black.withOpacity(0.7), height: 1.4)),
-            if (actions != null && actions.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
-            ]
           ],
         ),
       ),

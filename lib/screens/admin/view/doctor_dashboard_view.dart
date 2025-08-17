@@ -5,10 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:neuroinsight/screens/admin/controllers/doctors_auth_controller.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_appointment_model.dart';
-import 'package:neuroinsight/screens/admin/models/doctor_model.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_weather_model.dart';
 import 'package:neuroinsight/screens/admin/services/doctor_weather_service.dart';
-
 
 class DoctorDashboardView extends StatefulWidget {
   const DoctorDashboardView({super.key});
@@ -41,7 +39,8 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
     }
   }
 
-  Future<void> _showConfirmDialog(BuildContext context, AppointmentModel appointment) async {
+  // --- ✅ MODIFIED: Calls acceptAppointment ---
+  Future<void> _showAcceptDialog(BuildContext context, AppointmentModel appointment) async {
     DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -63,8 +62,61 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
         selectedTime.hour, selectedTime.minute
     );
 
-    _authController.confirmAppointmentDate(context, appointment.id, finalDateTime);
+    _authController.acceptAppointment(context, appointment.id, finalDateTime);
   }
+
+  // --- ✅ NEW: Dialog for mandatory rejection reason ---
+  Future<void> _showRejectDialog(BuildContext context, AppointmentModel appointment) async {
+    final reasonController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Reject Appointment'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Please provide a reason for rejection',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Reason cannot be empty.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  _authController.rejectAppointment(
+                    context,
+                    appointment.id,
+                    reasonController.text.trim(),
+                  );
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Confirm Rejection', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +167,7 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: const Color(0xFF42A5F5), // Restored blue color
+        color: const Color(0xFF42A5F5),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -283,16 +335,17 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
                       ),
                     ],
                     const SizedBox(height: 24),
+                    // --- ✅ MODIFIED: Button actions call new dialogs ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          onPressed: () => _authController.rejectAndRerouteAppointment(context, appointment.id),
+                          onPressed: () => _showRejectDialog(context, appointment),
                           child: const Text('Reject', style: TextStyle(color: Colors.red)),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () => _showConfirmDialog(context, appointment),
+                          onPressed: () => _showAcceptDialog(context, appointment),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                           child: const Text('Accept', style: TextStyle(color: Colors.white)),
                         ),
@@ -320,8 +373,4 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
       ),
     );
   }
-}
-
-extension on AdminAuthController {
-  void confirmAppointmentDate(BuildContext context, String id, DateTime finalDateTime) {}
 }

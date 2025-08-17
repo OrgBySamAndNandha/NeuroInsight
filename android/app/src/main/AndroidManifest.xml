@@ -31,10 +31,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    <!-- ✅ MODIFIED: This section allows the app to launch external URLs like Google Maps -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 </manifest>

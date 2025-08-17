@@ -12,11 +12,12 @@ class AppointmentModel {
   final String? confirmedDoctorId;
   final List<String> rejectionChain;
   final Timestamp createdAt;
-  // --- NEW FIELDS ---
   final String symptomSeverity;
   final String visitPreference;
   final GeoPoint? patientLocation;
   final Timestamp? appointmentDate;
+  // --- ✅ NEW FIELD ---
+  final String? rejectionReason;
 
   AppointmentModel({
     required this.id,
@@ -30,11 +31,12 @@ class AppointmentModel {
     this.confirmedDoctorId,
     required this.rejectionChain,
     required this.createdAt,
-    // --- NEW FIELDS ---
     required this.symptomSeverity,
     required this.visitPreference,
     this.patientLocation,
     this.appointmentDate,
+    // --- ✅ NEW FIELD ---
+    this.rejectionReason,
   });
 
   factory AppointmentModel.fromFirestore(DocumentSnapshot doc) {
@@ -51,11 +53,12 @@ class AppointmentModel {
       confirmedDoctorId: data['confirmedDoctorId'],
       rejectionChain: List<String>.from(data['rejectionChain'] ?? []),
       createdAt: data['createdAt'] ?? Timestamp.now(),
-      // --- NEW FIELDS ---
       symptomSeverity: data['symptomSeverity'] ?? 'Low',
       visitPreference: data['visitPreference'] ?? 'Clinic Visit',
       patientLocation: data['patientLocation'],
       appointmentDate: data['appointmentDate'],
+      // --- ✅ NEW FIELD ---
+      rejectionReason: data['rejectionReason'],
     );
   }
 }
