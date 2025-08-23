@@ -134,15 +134,7 @@ class _DoctorLoginViewState extends State<DoctorLoginView> {
                 const SizedBox(height: 20),
 
                 // --- ✅ ADDED BACK: The one-time setup button ---
-                TextButton(
-                  onPressed: () {
-                    _authController.createDoctorAccountAndProfile(context);
-                  },
-                  child: const Text(
-                    'First-Time Setup: Create 5 Doctor Accounts',
-                    style: TextStyle(color: Colors.blue),
-                  ),
-                ),
+
               ],
             ),
           ),
