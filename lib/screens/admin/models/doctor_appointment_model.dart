@@ -16,8 +16,8 @@ class AppointmentModel {
   final String visitPreference;
   final GeoPoint? patientLocation;
   final Timestamp? appointmentDate;
-  // --- ✅ NEW FIELD ---
   final String? rejectionReason;
+  final String? scanReportUrl;
 
   AppointmentModel({
     required this.id,
@@ -35,8 +35,8 @@ class AppointmentModel {
     required this.visitPreference,
     this.patientLocation,
     this.appointmentDate,
-    // --- ✅ NEW FIELD ---
     this.rejectionReason,
+    this.scanReportUrl,
   });
 
   factory AppointmentModel.fromFirestore(DocumentSnapshot doc) {
@@ -57,8 +57,8 @@ class AppointmentModel {
       visitPreference: data['visitPreference'] ?? 'Clinic Visit',
       patientLocation: data['patientLocation'],
       appointmentDate: data['appointmentDate'],
-      // --- ✅ NEW FIELD ---
       rejectionReason: data['rejectionReason'],
+      scanReportUrl: data['scanReportUrl'],
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:neuroinsight/screens/users/models/user_profile_analysis_model.dart';
-import 'package:neuroinsight/screens/users/views/user_home_view.dart';
+import 'package:neuroinsight/screens/users/views/user_nav_bar.dart';
 import 'user_auth_controller.dart';
 
 class ProfileController {

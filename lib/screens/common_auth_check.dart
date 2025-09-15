@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:neuroinsight/screens/admin/view/doctor_home_view.dart';
-import 'package:neuroinsight/screens/users/views/user_home_view.dart';
+import 'package:neuroinsight/screens/users/views/user_nav_bar.dart';
 import 'package:neuroinsight/screens/users/views/user_login_view.dart';
 import 'package:neuroinsight/screens/users/views/user_onboarding_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';

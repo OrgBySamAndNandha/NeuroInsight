@@ -5,9 +5,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:location/location.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_model.dart';
 import 'package:uuid/uuid.dart';
+
+import '../models/user_scan_report_model.dart';
 
 class BookingView extends StatefulWidget {
   final DoctorModel doctor;
@@ -29,6 +32,47 @@ class _BookingViewState extends State<BookingView> {
   bool _isLoading = false;
   SymptomSeverity _severity = SymptomSeverity.Low;
   VisitPreference _preference = VisitPreference.clinic;
+
+  List<ScanReportModel> _availableReports = [];
+  ScanReportModel? _selectedReport;
+  bool _reportsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAvailableReports();
+  }
+
+  Future<void> _fetchAvailableReports() async {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('scan_reports')
+          .where('patientId', isEqualTo: currentUser.uid)
+          .where('isAttachedToAppointment', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _availableReports = snapshot.docs.map((doc) => ScanReportModel.fromFirestore(doc)).toList();
+          _reportsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _reportsLoading = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
 
   Future<String?> _uploadPhoto(File image) async {
     try {
@@ -93,12 +137,19 @@ class _BookingViewState extends State<BookingView> {
         'confirmedDoctorId': null,
         'rejectionChain': [],
         'createdAt': Timestamp.now(),
-        // --- NEW FIELDS ---
         'appointmentDate': null,
         'symptomSeverity': _severity.name,
         'visitPreference': _preference == VisitPreference.clinic ? 'Clinic Visit' : 'Home Visit',
         'patientLocation': patientLocation,
+        'scanReportId': _selectedReport?.id,
       });
+
+      if (_selectedReport != null) {
+        await FirebaseFirestore.instance
+            .collection('scan_reports')
+            .doc(_selectedReport!.id)
+            .update({'isAttachedToAppointment': true});
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Your request has been submitted.'), backgroundColor: Colors.green)
@@ -110,6 +161,45 @@ class _BookingViewState extends State<BookingView> {
     } finally {
       if(mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showAttachReportSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        if (_reportsLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (_availableReports.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('You have no available reports to attach.'),
+            ),
+          );
+        }
+        return SafeArea(
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _availableReports.length,
+            itemBuilder: (context, index) {
+              final report = _availableReports[index];
+              return ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: Text('${report.reportType} Report'),
+                subtitle: Text('Saved on: ${DateFormat.yMMMd().format(report.createdAt.toDate())}'),
+                onTap: () {
+                  setState(() {
+                    _selectedReport = report;
+                  });
+                  Navigator.of(context).pop();
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -178,6 +268,8 @@ class _BookingViewState extends State<BookingView> {
               ),
               const SizedBox(height: 20),
               _buildPhotoUploadSection(),
+              const SizedBox(height: 24),
+              _buildAttachReportSection(),
               const SizedBox(height: 40),
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -200,6 +292,32 @@ class _BookingViewState extends State<BookingView> {
     );
   }
 
+  Widget _buildAttachReportSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle("Attach Scan Report (Optional)"),
+        InkWell(
+          onTap: _showAttachReportSheet,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              _selectedReport == null
+                  ? 'Tap to select a report'
+                  : 'Selected: ${_selectedReport!.reportType} Report (${DateFormat.yMMMd().format(_selectedReport!.createdAt.toDate())})',
+              style: TextStyle(color: _selectedReport == null ? Colors.grey.shade600 : Colors.black),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -208,7 +326,6 @@ class _BookingViewState extends State<BookingView> {
   }
 
   Widget _buildPhotoUploadSection() {
-    var _pickImage;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -228,7 +345,7 @@ class _BookingViewState extends State<BookingView> {
             ),
           ),
           TextButton(
-            onPressed:_pickImage,
+            onPressed: _pickImage,
             child: const Text('Upload Photo'),
           ),
         ],

@@ -7,7 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:neuroinsight/screens/users/models/user_model.dart';
-import 'package:neuroinsight/screens/users/views/user_home_view.dart';
+import 'package:neuroinsight/screens/users/views/user_nav_bar.dart';
 import 'package:neuroinsight/screens/users/views/user_login_view.dart';
 
 

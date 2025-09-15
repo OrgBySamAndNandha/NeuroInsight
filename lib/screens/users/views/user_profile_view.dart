@@ -1,5 +1,3 @@
-// lib/screens/views/user_profile_view.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -8,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:neuroinsight/screens/users/controllers/user_profile_controllers.dart';
 import 'package:neuroinsight/screens/users/models/user_profile_analysis_model.dart';
+import 'package:neuroinsight/screens/users/views/user_reports_list_view.dart';
 import 'package:numberpicker/numberpicker.dart';
-
 import 'user_edit_profile_view.dart';
 
 enum ActivePicker { none, birthYear, condition }
@@ -129,13 +127,10 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             const SizedBox(height: 16),
             _buildProfileButton(
-              text: 'Doctors Collaboration',
-              icon: Icons.group_outlined,
+              text: 'My Reports',
+              icon: Icons.article_outlined,
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text("Doctor Collaboration feature coming soon!")),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const UserReportsListView()));
               },
             ),
             const Spacer(),
@@ -152,7 +147,6 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  // --- MODIFICATION: Updated button styling to match login screen ---
   Widget _buildProfileButton({
     required String text,
     required IconData icon,
@@ -164,21 +158,19 @@ class _ProfileViewState extends State<ProfileView> {
       child: ElevatedButton.icon(
         icon: Icon(icon, color: Colors.white),
         label: Text(
-          text.toUpperCase(), // Match login button's uppercase style
+          text.toUpperCase(),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 12,
-            fontWeight: FontWeight.bold, // Added for consistency
-            letterSpacing: 3, // Added for consistency
+            fontWeight: FontWeight.bold,
+            letterSpacing: 3,
           ),
         ),
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          // Updated padding to match login button height
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            // Updated border radius for the pill shape
             borderRadius: BorderRadius.circular(200),
           ),
           elevation: 2,
@@ -186,7 +178,6 @@ class _ProfileViewState extends State<ProfileView> {
       ),
     );
   }
-  // --- END OF MODIFICATION ---
 
   Widget _buildSetupFlow() {
     return SafeArea(
