@@ -68,100 +68,79 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    const accentColor = Color(0xFF2DB8A1);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE1F7F5),
+      backgroundColor: const Color(0xFFF5F7FA), // Match the new background
       body: SafeArea(
-        bottom: false, // Ensure body content does not go behind the floating bar
+        bottom: false,
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      bottomNavigationBar: _buildFloatingNavBar(),
-    );
-  }
-
-  Widget _buildFloatingNavBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(50.0),
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              spreadRadius: 2,
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavBarItem(
-              icon: Icons.home_outlined,
-              isSelected: _selectedIndex == 0,
-              onTap: () => _onItemTapped(0),
-            ),
-            _NavBarItem(
-              icon: Icons.map_outlined,
-              isSelected: _selectedIndex == 1,
-              onTap: () => _onItemTapped(1),
-            ),
-            _NavBarItem(
-              icon: Icons.document_scanner_outlined,
-              isSelected: _selectedIndex == 2,
-              onTap: () => _onItemTapped(2),
-            ),
-            _NavBarItem(
-              icon: Icons.article_outlined,
-              isSelected: _selectedIndex == 3,
-              onTap: () => _onItemTapped(3),
-            ),
-            _NavBarItem(
-              icon: Icons.person_outline,
-              isSelected: _selectedIndex == 4,
-              onTap: () => _onItemTapped(4),
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          child: BottomNavigationBar(
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.map_outlined),
+                activeIcon: Icon(Icons.map),
+                label: 'Map',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.document_scanner_outlined),
+                activeIcon: Icon(Icons.document_scanner),
+                label: 'Scanner',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.article_outlined),
+                activeIcon: Icon(Icons.article),
+                label: 'Reports',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            backgroundColor: Colors.white,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: accentColor,
+            unselectedItemColor: Colors.grey.shade500,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            elevation: 0, // Elevation is handled by the container's shadow
+          ),
         ),
       ),
     );
   }
 }
-
-// A custom widget for each navigation bar item
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.black : Colors.white,
-          size: 28,
-        ),
-      ),
-    );
-  }
-}
-
 
 // The HomeContent widget remains unchanged
 class HomeContent extends StatelessWidget {
@@ -170,7 +149,7 @@ class HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFFE1F7F5),
+      backgroundColor: Color(0xFFF5F7FA), // Match the new background
       body: MemoryMatchGame(),
     );
   }
