@@ -9,7 +9,6 @@ class AdminAuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // --- UNCHANGED: createDoctorAccountAndProfile, signInDoctor, signOut, getDoctorProfile ---
   Future<void> createDoctorAccountAndProfile(BuildContext context) async {
     final List<Map<String, dynamic>> doctorsToCreate = [
       {'name': 'Dr. Sam', 'email': 'doctorsam@gmail.com', 'experience': 12, 'location': const GeoPoint(11.0168, 76.9558), 'address': '123 Medical Plaza, Coimbatore'},
@@ -30,7 +29,9 @@ class AdminAuthController {
         if (user == null) continue;
 
         await user.updateDisplayName(doctorData['name']!);
-        await _firestore.collection('admin').doc(user.uid).set({
+
+        // ✅ --- FIXED: Changed 'admin' to 'doctors' ---
+        await _firestore.collection('doctors').doc(user.uid).set({
           'uid': user.uid,
           'doctorName': doctorData['name'],
           'email': email,
@@ -77,7 +78,9 @@ class AdminAuthController {
     try {
       User? user = _auth.currentUser;
       if (user == null) return null;
-      final docSnapshot = await _firestore.collection('admin').doc(user.uid).get();
+
+      // ✅ --- FIXED: Changed 'admin' to 'doctors' ---
+      final docSnapshot = await _firestore.collection('doctors').doc(user.uid).get();
       if (docSnapshot.exists) {
         return DoctorModel.fromFirestore(docSnapshot);
       }
@@ -87,8 +90,7 @@ class AdminAuthController {
       return null;
     }
   }
-  // --- ✅ MODIFIED: Renamed from confirmAppointmentDate to acceptAppointment ---
-  /// Accepts an appointment by setting the date and time.
+
   Future<void> acceptAppointment(BuildContext context, String appointmentId, DateTime appointmentDate) async {
     final User? doctor = _auth.currentUser;
     if (doctor == null) return;
@@ -109,8 +111,6 @@ class AdminAuthController {
     }
   }
 
-  // --- ✅ MODIFIED: Replaced rejectAndRerouteAppointment with this new logic ---
-  /// Rejects an appointment with a mandatory reason.
   Future<void> rejectAppointment(BuildContext context, String appointmentId, String reason) async {
     final User? currentDoctorUser = _auth.currentUser;
     if (currentDoctorUser == null) return;
@@ -119,7 +119,6 @@ class AdminAuthController {
       await _firestore.collection('appointments').doc(appointmentId).update({
         'status': 'rejected',
         'rejectionReason': reason,
-        // Add current doctor to rejection chain for historical purposes
         'rejectionChain': FieldValue.arrayUnion([currentDoctorUser.uid]),
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request has been rejected."), backgroundColor: Colors.orange));

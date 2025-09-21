@@ -1,5 +1,3 @@
-// lib/screens/common_auth_check.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,14 +25,14 @@ class _AuthCheckState extends State<AuthCheck> {
       return hasOnboarded ? const LoginView() : const OnboardingView();
     } else {
       try {
+        // ✅ --- FIXED: Changed 'admin' to 'doctors' to match your database ---
         final doctorDoc = await FirebaseFirestore.instance
-            .collection('admin')
-            .where('email', isEqualTo: user.email)
-            .limit(1)
+            .collection('doctors')
+            .doc(user.uid)
             .get();
 
-        if (doctorDoc.docs.isNotEmpty) {
-          return const DoctorMainView(); // ✅ CHANGED
+        if (doctorDoc.exists) {
+          return const DoctorMainView();
         } else {
           return const HomeView();
         }
@@ -47,20 +45,15 @@ class _AuthCheckState extends State<AuthCheck> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    return FutureBuilder<Widget>(
+      future: _getInitialHome(),
       builder: (context, snapshot) {
-        return FutureBuilder<Widget>(
-          future: _getInitialHome(),
-          builder: (context, futureSnapshot) {
-            if (futureSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-            return futureSnapshot.data ?? const LoginView();
-          },
-        );
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snapshot.data ?? const LoginView();
       },
     );
   }

@@ -1,5 +1,3 @@
-// lib/screens/admin/views/doctor_login_view.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
@@ -34,6 +32,15 @@ class _DoctorLoginViewState extends State<DoctorLoginView> {
       _passwordController.text.trim(),
     );
     if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ✅ --- NEW: Function to trigger the one-time setup ---
+  void _setupDoctorAccounts() async {
+    setState(() => _isLoading = true);
+    await _authController.createDoctorAccountAndProfile(context);
+    if(mounted) {
       setState(() => _isLoading = false);
     }
   }
@@ -132,9 +139,8 @@ class _DoctorLoginViewState extends State<DoctorLoginView> {
                     ? const CircularProgressIndicator(color: Colors.black87)
                     : _buildLoginButton(),
                 const SizedBox(height: 20),
-
-                // --- ✅ ADDED BACK: The one-time setup button ---
-
+                // ✅ --- IMPLEMENTED: The one-time setup button ---
+                _buildSetupButton(),
               ],
             ),
           ),
@@ -162,8 +168,19 @@ class _DoctorLoginViewState extends State<DoctorLoginView> {
       ),
     );
   }
-}
 
-extension on AdminAuthController {
-  void createDoctorAccountAndProfile(BuildContext context) {}
+  // ✅ --- NEW: Widget for the setup button ---
+  Widget _buildSetupButton() {
+    return TextButton(
+      onPressed: _setupDoctorAccounts,
+      child: const Text(
+        'One-Time Doctor Account Setup',
+        style: TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.underline,
+        ),
+      ),
+    );
+  }
 }

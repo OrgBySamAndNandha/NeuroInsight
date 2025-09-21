@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:neuroinsight/screens/admin/controllers/doctors_auth_controller.dart';
+import 'package:neuroinsight/screens/admin/models/doctor_model.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_appointment_model.dart';
 import 'package:neuroinsight/screens/admin/models/doctor_weather_model.dart';
 import 'package:neuroinsight/screens/admin/services/doctor_weather_service.dart';
@@ -19,16 +20,19 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
   final User? doctor = FirebaseAuth.instance.currentUser;
   final AdminAuthController _authController = AdminAuthController();
   final WeatherService _weatherService = WeatherService();
+
+  Future<DoctorModel?>? _doctorProfileFuture;
   Future<WeatherModel?>? _weatherFuture;
 
   @override
   void initState() {
     super.initState();
+    _doctorProfileFuture = _authController.getDoctorProfile();
     _fetchWeatherData();
   }
 
   void _fetchWeatherData() async {
-    final doctorProfile = await _authController.getDoctorProfile();
+    final doctorProfile = await _doctorProfileFuture;
     if (doctorProfile != null && mounted) {
       setState(() {
         _weatherFuture = _weatherService.getWeather(
@@ -39,7 +43,6 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
     }
   }
 
-  // --- ✅ MODIFIED: Calls acceptAppointment ---
   Future<void> _showAcceptDialog(BuildContext context, AppointmentModel appointment) async {
     DateTime? selectedDate = await showDatePicker(
       context: context,
@@ -65,7 +68,6 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
     _authController.acceptAppointment(context, appointment.id, finalDateTime);
   }
 
-  // --- ✅ NEW: Dialog for mandatory rejection reason ---
   Future<void> _showRejectDialog(BuildContext context, AppointmentModel appointment) async {
     final reasonController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -128,9 +130,15 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            Text(
-              'Welcome, ${doctor?.displayName ?? 'Doctor'}!',
-              style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold),
+            FutureBuilder<DoctorModel?>(
+              future: _doctorProfileFuture,
+              builder: (context, snapshot) {
+                final doctorName = snapshot.data?.doctorName ?? doctor?.displayName ?? 'Doctor';
+                return Text(
+                  'Welcome, $doctorName!',
+                  style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold),
+                );
+              },
             ),
             const SizedBox(height: 24),
             _buildWeatherSection(),
@@ -155,7 +163,7 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          return const Center(child: Text('Could not load weather data.'));
+          return Center(child: Text('Could not load weather data. Error: ${snapshot.error}'));
         }
         final weather = snapshot.data!;
         return _buildWeatherCard(weather);
@@ -257,14 +265,16 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
                         DateFormat('ha').format(hourly.time).toLowerCase(),
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                      const SizedBox(height: 8),
+                      // ✅ --- FIXED: Reduced vertical spacing to prevent overflow ---
+                      const SizedBox(height: 6),
                       Image.network(
                         'https://openweathermap.org/img/wn/${hourly.iconCode}@2x.png',
                         width: 40,
                         height: 40,
                         errorBuilder: (c, o, s) => const Icon(Icons.cloud_off, color: Colors.white70, size: 40),
                       ),
-                      const SizedBox(height: 8),
+                      // ✅ --- FIXED: Reduced vertical spacing to prevent overflow ---
+                      const SizedBox(height: 6),
                       Text(
                         '${hourly.temperature.round()}°',
                         style: const TextStyle(color: Colors.white70, fontSize: 16),
@@ -335,7 +345,6 @@ class _DoctorDashboardViewState extends State<DoctorDashboardView> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    // --- ✅ MODIFIED: Button actions call new dialogs ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
