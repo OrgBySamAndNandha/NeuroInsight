@@ -78,14 +78,14 @@ class _MapViewState extends State<MapView> {
 
   Future<void> _fetchDoctors() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('doctors').get();
+      final snapshot = await FirebaseFirestore.instance.collection('admin').get();
       if (mounted) {
         _doctors = snapshot.docs.map((doc) => DoctorModel.fromFirestore(doc)).toList();
         _updateDoctorMarkers();
         _animateCameraToBounds();
       }
     } catch (e) {
-      print("Error fetching doctors: $e");
+      print("Error fetching admin: $e");
     }
   }
 

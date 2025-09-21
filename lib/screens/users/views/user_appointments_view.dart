@@ -23,7 +23,7 @@ class _MyAppointmentsViewState extends State<MyAppointmentsView> {
   }
 
   Future<Map<String, DoctorModel>> _fetchAllDoctors() async {
-    final snapshot = await FirebaseFirestore.instance.collection('doctors').get();
+    final snapshot = await FirebaseFirestore.instance.collection('admin').get();
     return {for (var doc in snapshot.docs) doc.id: DoctorModel.fromFirestore(doc)};
   }
 

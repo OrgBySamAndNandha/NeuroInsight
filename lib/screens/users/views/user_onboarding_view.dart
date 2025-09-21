@@ -101,7 +101,7 @@ class OnboardingView extends StatelessWidget {
         PageViewModel(
           image: Center(
             child: Lottie.asset(
-              'assets/animations/doctors.json',
+              'assets/animations/admin.json',
               height: 3000,
               width: 3000,
               fit: BoxFit.contain,

@@ -28,7 +28,7 @@ class _AuthCheckState extends State<AuthCheck> {
     } else {
       try {
         final doctorDoc = await FirebaseFirestore.instance
-            .collection('doctors')
+            .collection('admin')
             .where('email', isEqualTo: user.email)
             .limit(1)
             .get();

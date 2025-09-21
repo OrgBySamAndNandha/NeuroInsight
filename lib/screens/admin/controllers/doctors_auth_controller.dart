@@ -30,7 +30,7 @@ class AdminAuthController {
         if (user == null) continue;
 
         await user.updateDisplayName(doctorData['name']!);
-        await _firestore.collection('doctors').doc(user.uid).set({
+        await _firestore.collection('admin').doc(user.uid).set({
           'uid': user.uid,
           'doctorName': doctorData['name'],
           'email': email,
@@ -77,7 +77,7 @@ class AdminAuthController {
     try {
       User? user = _auth.currentUser;
       if (user == null) return null;
-      final docSnapshot = await _firestore.collection('doctors').doc(user.uid).get();
+      final docSnapshot = await _firestore.collection('admin').doc(user.uid).get();
       if (docSnapshot.exists) {
         return DoctorModel.fromFirestore(docSnapshot);
       }

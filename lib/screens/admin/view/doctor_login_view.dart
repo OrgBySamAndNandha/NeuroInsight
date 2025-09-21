@@ -66,7 +66,7 @@ class _DoctorLoginViewState extends State<DoctorLoginView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/animations/doctors.json', height: 200),
+                Lottie.asset('assets/animations/admin.json', height: 200),
                 const SizedBox(height: 20),
                 Text(
                   'Doctor Portal',
