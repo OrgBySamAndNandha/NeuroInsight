@@ -1,12 +1,39 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
-// A simple model for a chat message
+// ✅ Updated model with methods for Firestore
 class ChatMessage {
   final String text;
   final bool isUser;
+  final DateTime timestamp;
 
-  ChatMessage({required this.text, this.isUser = false});
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.timestamp,
+  });
+
+  // ✅ Converts a Firestore document into a ChatMessage object
+  factory ChatMessage.fromFirestore(DocumentSnapshot doc) {
+    Map data = doc.data() as Map<String, dynamic>;
+    return ChatMessage(
+      text: data['text'] ?? '',
+      isUser: data['isUser'] ?? false,
+      timestamp: (data['timestamp'] as Timestamp).toDate(),
+    );
+  }
+
+  // ✅ Converts a ChatMessage object into a map for Firestore
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text,
+      'isUser': isUser,
+      'timestamp': Timestamp.fromDate(timestamp),
+    };
+  }
 }
 
 class ChatWithNeuroInsightView extends StatefulWidget {
@@ -19,39 +46,38 @@ class ChatWithNeuroInsightView extends StatefulWidget {
 
 class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
   final TextEditingController _textController = TextEditingController();
-  final List<ChatMessage> _messages = [];
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
-  @override
-  void initState() {
-    super.initState();
-    // Add the initial greeting message from the assistant
-    _messages.add(
-      ChatMessage(
-        text:
-        "Hello! I am Neuro Insight's AI assistant. You can ask me simple queries about Alzheimer's, Parkinson's, or the characteristics of a healthy brain.",
-      ),
+  // ✅ Saves a new message to Firestore
+  Future<void> _sendMessage(String text, bool isUser) async {
+    if (text.trim().isEmpty || _currentUser == null) return;
+
+    final message = ChatMessage(
+      text: text,
+      isUser: isUser,
+      timestamp: DateTime.now(),
     );
+
+    // Path: chats_of_neuro_insight -> {userId} -> messages -> {messageId}
+    await FirebaseFirestore.instance
+        .collection('chats_of_neuro_insight')
+        .doc(_currentUser!.uid)
+        .collection('messages')
+        .add(message.toJson());
   }
 
   void _handleSubmitted(String text) {
-    if (text.trim().isEmpty) return;
     _textController.clear();
+    // 1. Save the user's message
+    _sendMessage(text, true);
 
-    // Add user's message
-    setState(() {
-      _messages.insert(0, ChatMessage(text: text, isUser: true));
-    });
-
-    // Simulate AI response
-    String response = _getBotResponse(text);
+    // 2. Get and save the bot's response
+    final String responseText = _getBotResponse(text);
     Future.delayed(const Duration(milliseconds: 500), () {
-      setState(() {
-        _messages.insert(0, ChatMessage(text: response));
-      });
+      _sendMessage(responseText, false);
     });
   }
 
-  // Simple keyword-based response logic
   String _getBotResponse(String query) {
     String lowerCaseQuery = query.toLowerCase();
 
@@ -69,7 +95,7 @@ class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE1F7F5),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: Text(
           'Chat with Neuro Insight',
@@ -80,13 +106,44 @@ class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              reverse: true,
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
+            // ✅ This StreamBuilder listens for messages in Firestore
+            child: _currentUser == null
+                ? const Center(child: Text("You must be logged in to chat."))
+                : StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats_of_neuro_insight')
+                  .doc(_currentUser!.uid)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return _buildInitialPrompt();
+                }
+
+                final messages = snapshot.data!.docs
+                    .map((doc) => ChatMessage.fromFirestore(doc))
+                    .toList();
+
+                final chatItems = _buildChatList(messages);
+
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: chatItems.length,
+                  itemBuilder: (context, index) {
+                    final item = chatItems[index];
+                    if (item is ChatMessage) {
+                      return _buildMessageBubble(item);
+                    } else if (item is DateTime) {
+                      return _buildDateSeparator(item);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                );
               },
             ),
           ),
@@ -96,38 +153,76 @@ class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
-    final bubbleAlignment =
-    message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bubbleColor =
-    message.isUser ? const Color(0xFF2DB8A1) : Colors.white;
-    final textColor = message.isUser ? Colors.white : Colors.black87;
+  // Helper methods for building the UI (mostly unchanged)
+  List<Object> _buildChatList(List<ChatMessage> messages) {
+    List<Object> items = [];
+    DateTime? lastDate;
+    // Note: The loop is reversed because messages are fetched descending.
+    for (var message in messages.reversed) {
+      DateTime messageDate = DateTime(message.timestamp.year, message.timestamp.month, message.timestamp.day);
+      if (lastDate == null || messageDate != lastDate) {
+        items.add(messageDate);
+        lastDate = messageDate;
+      }
+      items.add(message);
+    }
+    // Return the list reversed again to show newest at the bottom.
+    return items.reversed.toList();
+  }
 
+  Widget _buildInitialPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Text(
+          "Hello! Ask a simple query about Alzheimer's, Parkinson's, or the characteristics of a healthy brain to begin your chat.",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+        ),
+      ),
+    );
+  }
+
+  String _formatDateSeparator(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+
+    if (date == today) return 'Today';
+    if (date == yesterday) return 'Yesterday';
+    return DateFormat('MMMM d, yyyy').format(date);
+  }
+
+  Widget _buildDateSeparator(DateTime date) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+        child: Text(_formatDateSeparator(date), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    final isUser = message.isUser;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Column(
-        crossAxisAlignment: bubbleAlignment,
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
             decoration: BoxDecoration(
-              color: bubbleColor,
+              color: isUser ? const Color(0xFF2DB8A1) : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), spreadRadius: 1, blurRadius: 3)],
             ),
-            child: Text(
-              message.text,
-              style: TextStyle(color: textColor, fontSize: 16),
-            ),
+            child: Text(message.text, style: TextStyle(color: isUser ? Colors.white : Colors.black87, fontSize: 16)),
           ),
         ],
       ),
@@ -137,16 +232,7 @@ class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
   Widget _buildTextComposer() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -1),
-            blurRadius: 3,
-            color: Colors.black.withOpacity(0.05),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, boxShadow: [BoxShadow(offset: const Offset(0, -1), blurRadius: 3, color: Colors.black.withOpacity(0.05))]),
       child: SafeArea(
         child: Row(
           children: [
@@ -156,14 +242,10 @@ class _ChatWithNeuroInsightViewState extends State<ChatWithNeuroInsightView> {
                 onSubmitted: _handleSubmitted,
                 decoration: InputDecoration(
                   hintText: 'Ask a simple query...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
                   filled: true,
                   fillColor: Colors.grey.shade200,
-                  contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                 ),
               ),
             ),
