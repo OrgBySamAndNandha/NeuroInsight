@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // --- ✅ NEW: For catching PlatformException ---
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
@@ -282,9 +282,9 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  // --- ✅ MODIFIED: Added a try-catch block to handle the PlatformException ---
+  // --- ✅ MODIFIED: The Google Maps URL is now correct ---
   Future<void> _launchMapsUrl(LatLng origin, LatLng destination) async {
-    final String googleMapsUrl = "https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving";
+    final String googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
     final Uri uri = Uri.parse(googleMapsUrl);
 
     try {
@@ -296,7 +296,6 @@ class _MapViewState extends State<MapView> {
         );
       }
     } on PlatformException {
-      // This exception is thrown on Android 11+ if the required <queries> are not in AndroidManifest.xml
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open maps. Please ensure a maps application is installed.')),
       );
