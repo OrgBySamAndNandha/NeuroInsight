@@ -8,6 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+// --- ✅ NEW: Import for the chat screen ---
+import 'user_chat_neuro_insight.dart';
+
 class ReportScannerView extends StatefulWidget {
   const ReportScannerView({super.key});
 
@@ -138,6 +141,19 @@ class _ReportScannerViewState extends State<ReportScannerView> {
         title: Text('Analyze Scan & Save Report', style: GoogleFonts.lora(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
       ),
+      // --- ✅ MODIFIED: Added FloatingActionButton ---
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatWithNeuroInsightView()),
+          );
+        },
+        backgroundColor: const Color(0xFF2DB8A1),
+        tooltip: 'Chat with AI',
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      // --- End of modification ---
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(

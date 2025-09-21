@@ -309,7 +309,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -359,7 +359,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
         ),
       ),

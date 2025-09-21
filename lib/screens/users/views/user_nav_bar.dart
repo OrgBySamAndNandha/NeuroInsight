@@ -109,9 +109,9 @@ class _HomeViewState extends State<HomeView> {
                 label: 'Map',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.document_scanner_outlined),
-                activeIcon: Icon(Icons.document_scanner),
-                label: 'Scanner',
+                icon: Icon(Icons.chat),
+                activeIcon: Icon(Icons.chat_bubble),
+                label: 'Chats',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.article_outlined),
