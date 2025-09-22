@@ -24,10 +24,8 @@ class _MapViewState extends State<MapView> {
   final Completer<GoogleMapController> _mapController = Completer();
 
   LatLng? _currentPosition;
-  List<DoctorModel> _doctors = [];
   final Map<String, Marker> _markers = {};
   StreamSubscription? _appointmentStreamSubscription;
-  AppointmentModel? _userAppointment;
 
   @override
   void initState() {
@@ -43,8 +41,9 @@ class _MapViewState extends State<MapView> {
 
   Future<void> _initialize() async {
     await _requestLocationPermission();
-    await _getLocation();
-    await _fetchDoctors();
+    // ✅ --- MODIFIED: These now run independently ---
+    _getLocation();
+    _fetchDoctors();
     _listenToAppointmentStatus();
   }
 
@@ -61,34 +60,78 @@ class _MapViewState extends State<MapView> {
     }
   }
 
+  // ✅ --- MODIFIED: Now handles its own state update for the user marker ---
   Future<void> _getLocation() async {
     try {
       var locationData = await _locationController.getLocation();
-      if (locationData.latitude != null && locationData.longitude != null) {
-        if (mounted) {
-          setState(() {
-            _currentPosition = LatLng(locationData.latitude!, locationData.longitude!);
-          });
-        }
+      if (locationData.latitude != null && locationData.longitude != null && mounted) {
+        setState(() {
+          _currentPosition = LatLng(locationData.latitude!, locationData.longitude!);
+          _markers["current_location"] = Marker(
+            markerId: const MarkerId("current_location"),
+            position: _currentPosition!,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+            infoWindow: const InfoWindow(title: "My Location"),
+          );
+        });
+        _animateToUserLocation();
       }
     } catch (e) {
       print("Could not get location: $e");
     }
   }
 
+  // ✅ --- MODIFIED: Now handles its own state update for doctor markers ---
   Future<void> _fetchDoctors() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('admin').get();
+      final snapshot = await FirebaseFirestore.instance.collection('doctors').get();
       if (mounted) {
-        _doctors = snapshot.docs.map((doc) => DoctorModel.fromFirestore(doc)).toList();
-        _updateDoctorMarkers();
-        _animateCameraToBounds();
+        final doctors = snapshot.docs.map((doc) => DoctorModel.fromFirestore(doc)).toList();
+        final confirmedAppointment = await _getConfirmedAppointment();
+
+        setState(() {
+          for (final doctor in doctors) {
+            BitmapDescriptor markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+            // If there's a confirmed appointment, color that doctor's marker green
+            if (confirmedAppointment != null && confirmedAppointment.confirmedDoctorId == doctor.uid) {
+              markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+            }
+
+            _markers[doctor.uid] = Marker(
+              markerId: MarkerId(doctor.uid),
+              position: LatLng(doctor.location.latitude, doctor.location.longitude),
+              icon: markerColor,
+              infoWindow: InfoWindow(title: doctor.doctorName, snippet: doctor.specialty),
+              onTap: () => _onMarkerTapped(doctor, confirmedAppointment),
+            );
+          }
+        });
       }
     } catch (e) {
-      print("Error fetching admin: $e");
+      print("Error fetching doctors: $e");
     }
   }
 
+  // Helper to get the latest confirmed appointment
+  Future<AppointmentModel?> _getConfirmedAppointment() async {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return null;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('appointments')
+        .where('patientId', isEqualTo: currentUser.uid)
+        .where('status', isEqualTo: 'confirmed')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .get();
+
+    if(snapshot.docs.isNotEmpty) {
+      return AppointmentModel.fromFirestore(snapshot.docs.first);
+    }
+    return null;
+  }
+
+  // This listener is now simplified, just re-fetches doctors to update colors
   void _listenToAppointmentStatus() {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
@@ -96,97 +139,29 @@ class _MapViewState extends State<MapView> {
     _appointmentStreamSubscription = FirebaseFirestore.instance
         .collection('appointments')
         .where('patientId', isEqualTo: currentUser.uid)
-        .orderBy('createdAt', descending: true)
-        .limit(1)
         .snapshots()
-        .listen((snapshot) {
-      if (snapshot.docs.isNotEmpty) {
-        final appointment = AppointmentModel.fromFirestore(snapshot.docs.first);
-        if (appointment.status == 'confirmed' || appointment.status == 'pending') {
-          _userAppointment = appointment;
-        } else {
-          _userAppointment = null;
-        }
-      } else {
-        _userAppointment = null;
-      }
-      if (mounted) {
-        _updateDoctorMarkers();
-      }
+        .listen((_) {
+      // When appointments change, re-fetch doctors to update marker colors
+      _fetchDoctors();
     });
   }
 
-  void _updateDoctorMarkers() {
-    if (!mounted) return;
-
-    for (final doctor in _doctors) {
-      BitmapDescriptor markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-
-      if (_userAppointment != null && _userAppointment!.status == 'confirmed') {
-        if (_userAppointment!.confirmedDoctorId == doctor.uid) {
-          markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-        }
-      }
-
-      _markers[doctor.uid] = Marker(
-        markerId: MarkerId(doctor.uid),
-        position: LatLng(doctor.location.latitude, doctor.location.longitude),
-        icon: markerColor,
-        infoWindow: InfoWindow(title: doctor.doctorName, snippet: doctor.specialty),
-        onTap: () => _onMarkerTapped(doctor),
-      );
-    }
-    _updateUserMarker();
-  }
-
-  void _updateUserMarker() {
-    if (_currentPosition == null || !mounted) return;
-
-    _markers["current_location"] = Marker(
-      markerId: const MarkerId("current_location"),
-      position: _currentPosition!,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-      infoWindow: const InfoWindow(title: "My Location"),
-    );
-    setState(() {});
-  }
-
-  void _animateCameraToBounds() async {
-    if (_doctors.isEmpty || !mounted) return;
-
+  Future<void> _animateToUserLocation() async {
+    if (_currentPosition == null) return;
     final GoogleMapController controller = await _mapController.future;
-
-    final allPoints = _doctors.map((d) => LatLng(d.location.latitude, d.location.longitude)).toList();
-    if (_currentPosition != null) {
-      allPoints.add(_currentPosition!);
-    }
-
-    LatLngBounds bounds = _boundsFromLatLngList(allPoints);
-
-    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50.0));
+    controller.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(
+        target: _currentPosition!,
+        zoom: 10.0,
+      ),
+    ));
   }
 
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    double? x0, x1, y0, y1;
-    for (LatLng latLng in list) {
-      if (x0 == null) {
-        x0 = x1 = latLng.latitude;
-        y0 = y1 = latLng.longitude;
-      } else {
-        if (latLng.latitude > x1!) x1 = latLng.latitude;
-        if (latLng.latitude < x0) x0 = latLng.latitude;
-        if (latLng.longitude > y1!) y1 = latLng.longitude;
-        if (latLng.longitude < y0!) y0 = latLng.longitude;
-      }
-    }
-    return LatLngBounds(northeast: LatLng(x1!, y1!), southwest: LatLng(x0!, y0!));
+  void _onMarkerTapped(DoctorModel doctor, AppointmentModel? appointment) {
+    _showDoctorDetailsSheet(context, doctor, appointment);
   }
 
-  void _onMarkerTapped(DoctorModel doctor) {
-    _showDoctorDetailsSheet(context, doctor);
-  }
-
-  void _showDoctorDetailsSheet(BuildContext context, DoctorModel doctor) {
+  void _showDoctorDetailsSheet(BuildContext context, DoctorModel doctor, AppointmentModel? userAppointment) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -194,9 +169,9 @@ class _MapViewState extends State<MapView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        final bool isConfirmedWithThisDoctor = _userAppointment != null &&
-            _userAppointment!.status == 'confirmed' &&
-            _userAppointment!.confirmedDoctorId == doctor.uid;
+        final bool isConfirmedWithThisDoctor = userAppointment != null &&
+            userAppointment.status == 'confirmed' &&
+            userAppointment.confirmedDoctorId == doctor.uid;
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
@@ -217,7 +192,7 @@ class _MapViewState extends State<MapView> {
               const SizedBox(height: 24),
 
               if (isConfirmedWithThisDoctor)
-                _buildScheduledAppointmentInfo(doctor)
+                _buildScheduledAppointmentInfo(doctor, userAppointment!)
               else
                 _buildRequestAppointmentButton(doctor),
             ],
@@ -227,9 +202,9 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Widget _buildScheduledAppointmentInfo(DoctorModel doctor) {
-    final appointmentTime = _userAppointment!.appointmentDate != null
-        ? DateFormat('EEE, MMM d, yyyy @ h:mm a').format(_userAppointment!.appointmentDate!.toDate())
+  Widget _buildScheduledAppointmentInfo(DoctorModel doctor, AppointmentModel userAppointment) {
+    final appointmentTime = userAppointment.appointmentDate != null
+        ? DateFormat('EEE, MMM d, yyyy @ h:mm a').format(userAppointment.appointmentDate!.toDate())
         : 'Not Scheduled';
 
     return Column(
@@ -282,7 +257,6 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  // --- ✅ MODIFIED: The Google Maps URL is now correct ---
   Future<void> _launchMapsUrl(LatLng origin, LatLng destination) async {
     final String googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
     final Uri uri = Uri.parse(googleMapsUrl);
@@ -351,8 +325,8 @@ class _MapViewState extends State<MapView> {
       ),
       body: GoogleMap(
         initialCameraPosition: CameraPosition(
-          target: const LatLng(11.0168, 76.9558),
-          zoom: 9,
+          target: const LatLng(11.0168, 76.9558), // Initial center on Coimbatore
+          zoom: 8,
         ),
         onMapCreated: (GoogleMapController controller) {
           _mapController.complete(controller);

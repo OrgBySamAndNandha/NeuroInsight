@@ -109,8 +109,8 @@ class _HomeViewState extends State<HomeView> {
                 label: 'Map',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.chat),
-                activeIcon: Icon(Icons.chat_bubble),
+                icon: Icon(Icons.wechat_sharp),
+                activeIcon: Icon(Icons.wechat),
                 label: 'Chats',
               ),
               BottomNavigationBarItem(

@@ -151,7 +151,7 @@ class _ReportScannerViewState extends State<ReportScannerView> {
         },
         backgroundColor: const Color(0xFF2DB8A1),
         tooltip: 'Chat with AI',
-        child: const Icon(Icons.wechat_sharp, color: Colors.white),
+        child: const Icon(Icons.chat, color: Colors.white),
       ),
       // --- End of modification ---
       body: SingleChildScrollView(
