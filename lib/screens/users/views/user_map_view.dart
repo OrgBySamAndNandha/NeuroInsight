@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui; // ✅ --- ADDED: For custom marker creation ---
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,9 +28,59 @@ class _MapViewState extends State<MapView> {
   final Map<String, Marker> _markers = {};
   StreamSubscription? _appointmentStreamSubscription;
 
+  // ✅ --- NEW: State variables to hold the custom doctor icons ---
+  final Map<String, BitmapDescriptor> _doctorIcons = {};
+  BitmapDescriptor? _confirmedDoctorIcon;
+
+  // ✅ --- NEW: Helper function to create a map marker from an icon ---
+  Future<BitmapDescriptor> _bitmapDescriptorFromIconData(IconData iconData, Color color, double size) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final Paint paint = Paint()..color = color;
+    final TextPainter textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
+
+    textPainter.text = TextSpan(
+      text: String.fromCharCode(iconData.codePoint),
+      style: TextStyle(
+        fontSize: size * 0.6, // Icon size relative to the circle
+        fontFamily: iconData.fontFamily,
+        color: Colors.white,
+      ),
+    );
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2, paint);
+    textPainter.layout();
+    textPainter.paint(canvas, Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2));
+    final img = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
+  }
+
+  // ✅ --- NEW: Prepare the custom icons when the screen loads ---
+  void _setupCustomMarkers() async {
+    final List<Map<String, dynamic>> doctorsData = [
+      {'name': 'Dr. Sam', 'color': Colors.blue.shade700},
+      {'name': 'Dr. Nandha', 'color': Colors.purple.shade700},
+      {'name': 'Dr. Thanu', 'color': Colors.teal.shade700},
+      {'name': 'Dr. Vel', 'color': Colors.orange.shade800},
+      {'name': 'Dr. Abi', 'color': Colors.indigo.shade700},
+    ];
+
+    for (var doc in doctorsData) {
+      final icon = await _bitmapDescriptorFromIconData(Icons.medical_services, doc['color'], 130);
+      if (mounted) {
+        setState(() {
+          _doctorIcons[doc['name']] = icon;
+        });
+      }
+    }
+    // Create a separate green icon for the confirmed doctor
+    _confirmedDoctorIcon = await _bitmapDescriptorFromIconData(Icons.medical_services, Colors.green.shade700, 150);
+  }
+
   @override
   void initState() {
     super.initState();
+    _setupCustomMarkers(); // Call the marker setup
     _initialize();
   }
 
@@ -41,7 +92,6 @@ class _MapViewState extends State<MapView> {
 
   Future<void> _initialize() async {
     await _requestLocationPermission();
-    // ✅ --- MODIFIED: These now run independently ---
     _getLocation();
     _fetchDoctors();
     _listenToAppointmentStatus();
@@ -60,7 +110,6 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  // ✅ --- MODIFIED: Now handles its own state update for the user marker ---
   Future<void> _getLocation() async {
     try {
       var locationData = await _locationController.getLocation();
@@ -81,7 +130,6 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  // ✅ --- MODIFIED: Now handles its own state update for doctor markers ---
   Future<void> _fetchDoctors() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('doctors').get();
@@ -91,16 +139,18 @@ class _MapViewState extends State<MapView> {
 
         setState(() {
           for (final doctor in doctors) {
-            BitmapDescriptor markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-            // If there's a confirmed appointment, color that doctor's marker green
+            // ✅ --- MODIFIED: Logic to use the new custom doctor icons ---
+            BitmapDescriptor markerIcon;
             if (confirmedAppointment != null && confirmedAppointment.confirmedDoctorId == doctor.uid) {
-              markerColor = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+              markerIcon = _confirmedDoctorIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+            } else {
+              markerIcon = _doctorIcons[doctor.doctorName] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
             }
 
             _markers[doctor.uid] = Marker(
               markerId: MarkerId(doctor.uid),
               position: LatLng(doctor.location.latitude, doctor.location.longitude),
-              icon: markerColor,
+              icon: markerIcon,
               infoWindow: InfoWindow(title: doctor.doctorName, snippet: doctor.specialty),
               onTap: () => _onMarkerTapped(doctor, confirmedAppointment),
             );
@@ -112,7 +162,6 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  // Helper to get the latest confirmed appointment
   Future<AppointmentModel?> _getConfirmedAppointment() async {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return null;
@@ -131,7 +180,6 @@ class _MapViewState extends State<MapView> {
     return null;
   }
 
-  // This listener is now simplified, just re-fetches doctors to update colors
   void _listenToAppointmentStatus() {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
@@ -141,7 +189,6 @@ class _MapViewState extends State<MapView> {
         .where('patientId', isEqualTo: currentUser.uid)
         .snapshots()
         .listen((_) {
-      // When appointments change, re-fetch doctors to update marker colors
       _fetchDoctors();
     });
   }
@@ -258,7 +305,7 @@ class _MapViewState extends State<MapView> {
   }
 
   Future<void> _launchMapsUrl(LatLng origin, LatLng destination) async {
-    final String googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
+    final String googleMapsUrl = 'http://googleusercontent.com/maps/google.com/0{origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
     final Uri uri = Uri.parse(googleMapsUrl);
 
     try {
@@ -325,7 +372,7 @@ class _MapViewState extends State<MapView> {
       ),
       body: GoogleMap(
         initialCameraPosition: CameraPosition(
-          target: const LatLng(11.0168, 76.9558), // Initial center on Coimbatore
+          target: const LatLng(11.0168, 76.9558),
           zoom: 8,
         ),
         onMapCreated: (GoogleMapController controller) {
