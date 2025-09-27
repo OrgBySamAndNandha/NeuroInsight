@@ -19,10 +19,14 @@ class _TaskDetailViewState extends State<TaskDetailView> {
   File? _imageFile;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
-  final String _geminiApiKey = 'YOUR_GEMINI_API_KEY_HERE'; // WARNING: NOT FOR PRODUCTION
+  final String _openaiApiKey =
+      'YOUR_OPENAI_API_KEY_HERE'; // Replace with your actual API key
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 50,
+    );
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
@@ -32,7 +36,9 @@ class _TaskDetailViewState extends State<TaskDetailView> {
 
   Future<void> _verifyWithGemini() async {
     if (_imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please upload a photo first.")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please upload a photo first.")),
+      );
       return;
     }
     setState(() => _isLoading = true);
@@ -40,39 +46,68 @@ class _TaskDetailViewState extends State<TaskDetailView> {
     try {
       final bytes = await _imageFile!.readAsBytes();
       final base64Image = base64Encode(bytes);
-      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$_geminiApiKey');
+      final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
       final payload = jsonEncode({
-        "contents": [{
-          "parts": [
-            {"text": widget.task.verificationPrompt},
-            {"inline_data": {"mime_type": "image/jpeg", "data": base64Image}}
-          ]
-        }]
+        "model": "gpt-4o",
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {"type": "text", "text": widget.task.verificationPrompt},
+              {
+                "type": "image_url",
+                "image_url": {"url": "data:image/jpeg;base64,$base64Image"},
+              },
+            ],
+          },
+        ],
+        "max_tokens": 1000,
       });
 
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: payload);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_openaiApiKey',
+        },
+        body: payload,
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final resultText = data['candidates'][0]['content']['parts'][0]['text'].toString().toLowerCase();
+        final resultText = data['choices'][0]['message']['content']
+            .toString()
+            .toLowerCase();
 
-        // Simple check if Gemini's response contains "yes"
+        // Simple check if ChatGPT's response contains "yes"
         if (resultText.contains('yes')) {
           // In a real app, update the task status in Firestore here
           // FirebaseFirestore.instance.collection('users').doc(uid).collection('daily_tasks').doc(widget.task.id).update({'status': 'completed'});
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Task Verified! Great job!"), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Task Verified! Great job!"),
+              backgroundColor: Colors.green,
+            ),
+          );
           Navigator.of(context).pop();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Verification failed. Please try a clearer photo."), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Verification failed. Please try a clearer photo."),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } else {
         throw Exception('Failed to verify with server.');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("An error occurred: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("An error occurred: $e")));
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -81,7 +116,10 @@ class _TaskDetailViewState extends State<TaskDetailView> {
     return Scaffold(
       backgroundColor: const Color(0xFFE1F7F5),
       appBar: AppBar(
-        title: Text(widget.task.title, style: GoogleFonts.lora(fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.task.title,
+          style: GoogleFonts.lora(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
       ),
@@ -94,18 +132,30 @@ class _TaskDetailViewState extends State<TaskDetailView> {
             const SizedBox(height: 24),
             Text(
               widget.task.title,
-              style: GoogleFonts.lora(fontSize: 28, fontWeight: FontWeight.bold),
+              style: GoogleFonts.lora(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               widget.task.description,
-              style: const TextStyle(fontSize: 18, height: 1.5, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: 18,
+                height: 1.5,
+                color: Colors.black87,
+              ),
             ),
             const Spacer(),
             if (_imageFile != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(_imageFile!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                child: Image.file(
+                  _imageFile!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
             const SizedBox(height: 16),
             SizedBox(
@@ -114,20 +164,28 @@ class _TaskDetailViewState extends State<TaskDetailView> {
                 onPressed: _pickImage,
                 icon: const Icon(Icons.camera_alt),
                 label: const Text("Upload Photo Proof"),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _imageFile == null || _isLoading ? null : _verifyWithGemini,
-                icon: _isLoading ? const SizedBox.shrink() : const Icon(Icons.check_circle),
-                label: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Verify & Complete Task"),
+                onPressed: _imageFile == null || _isLoading
+                    ? null
+                    : _verifyWithGemini,
+                icon: _isLoading
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check_circle),
+                label: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Verify & Complete Task"),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16)
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
             ),

@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Large ML Model Files
+DL Model/
+
+# API Keys and Sensitive Data
+**/*api*key*
+.env
