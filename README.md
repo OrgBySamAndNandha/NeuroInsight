@@ -1,4 +1,63 @@
-# 🧠 NeuroInsight
+# 🧠 NeuroInsight - Dual AI Brain Analysis System
+
+A powerful Flutter application that combines **CNN deep learning** and **ChatGPT AI** for comprehensive brain scan analysis, specializing in Alzheimer's and Parkinson's disease prediction.
+
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
+
+## ✨ Features
+
+### 🎯 Dual AI Analysis
+- **🧠 CNN Model**: Specialized neurological disease prediction (Alzheimer's & Parkinson's)
+- **💬 ChatGPT Integration**: General medical image analysis using GPT-4o vision
+- **📊 Professional Results**: Medical-grade reporting and recommendations
+
+### 📱 Cross-Platform Support
+- **Android** & **iOS** mobile apps
+- **Web** application
+- **Desktop** (macOS, Windows, Linux)
+
+### 🚀 Easy Deployment
+- **One-command startup**: `./start_app.sh`
+- **Automated setup**: Python environment and Flask server
+- **Docker ready**: Containerized CNN service
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Flutter App   │    │  Python Service  │    │   OpenAI API    │
+│                 │    │                  │    │                 │
+│  • Image Upload │◄──►│  • CNN Model     │    │  • GPT-4o       │
+│  • UI/UX        │    │  • Flask Server  │    │  • Vision API   │
+│  • Results      │    │  • Port 5002     │    │  • Medical AI   │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Flutter SDK
+- Python 3.8+
+- OpenAI API Key
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/OrgBySamAndNandha/NeuroInsight.git
+cd NeuroInsight
+
+# Install dependencies
+flutter pub get
+
+# Set up your API key (see COMPLETE_SETUP_GUIDE.md)
+# Add your OpenAI API key to the source files
+
+# Start the application
+./start_app.sh
+```oInsight
 
 **AI-powered Alzheimer’s MRI Analysis and Doctor-Patient Collaboration Platform**
 
